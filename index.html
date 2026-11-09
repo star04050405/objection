@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>objection. 逆转裁判123</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon-180.png">
+<link rel="manifest" href="manifest.json">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{font-family:Georgia,"Songti SC","STSong","SimSun",serif;
+ background:#141F35;color:#EDE6D2;
+ padding:0 18px calc(44px + env(safe-area-inset-bottom))}
+.mono{font-family:Courier,monospace}
+/* 头：法庭深蓝+异议气泡 */
+header{padding:30px 4px 6px;text-align:center}
+.court{font-size:.64rem;letter-spacing:.42em;color:#C9A227;margin-bottom:16px}
+.bubble{display:inline-block;position:relative;background:#C13B2E;color:#fff;
+ padding:10px 22px 11px;font-weight:900;font-size:1.9rem;letter-spacing:.04em;
+ border-radius:6px;box-shadow:0 4px 0 #7E241B;transform:rotate(-2deg);margin:2px 0 8px}
+.bubble:after{content:'';position:absolute;left:26px;bottom:-12px;
+ border:12px solid transparent;border-top-color:#7E241B;border-bottom:0;border-left:0}
+.bubble small{display:block;font-size:.62rem;font-weight:400;letter-spacing:.3em;opacity:.85;margin-top:2px}
+h1{font-size:1.02rem;font-weight:700;color:#EDE6D2;margin-top:14px;letter-spacing:.14em}
+.sub{font-size:.76rem;color:#A99F84;margin-top:6px;letter-spacing:.06em}
+.meta{margin:10px auto 0;font-size:.66rem;color:#8A7F66;letter-spacing:.12em}
+/* 进度 */
+.prog{max-width:640px;margin:20px auto 0;text-align:center}
+.pbar{height:3px;background:rgba(201,162,39,.18);border-radius:2px;overflow:hidden;max-width:340px;margin:8px auto 0}
+.pfill{height:100%;width:0;background:#C9A227;transition:width .4s}
+.pt{font-size:.72rem;color:#C9A227;letter-spacing:.2em}
+/* 证物墙 */
+.wallwrap{max-width:640px;margin:18px auto 0}
+.wall{display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
+.w{width:22px;height:22px;border-radius:50%;border:1px solid rgba(201,162,39,.4);
+ background:rgba(255,255,255,.03);position:relative;cursor:pointer;transition:all .25s}
+.w.on{background:#C13B2E;border-color:#E8C87A;box-shadow:0 0 8px rgba(193,59,46,.5)}
+.w.on:after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff}
+/* 部分区 */
+.part{max-width:640px;margin:34px auto 0}
+.phead{border-left:3px solid;padding:2px 0 2px 12px;margin-bottom:12px}
+.pn{font-size:.6rem;letter-spacing:.3em;color:#C9A227}
+.ph{font-size:1.06rem;font-weight:700;margin-top:3px}
+.pd{font-size:.72rem;color:#A99F84;margin-top:3px;line-height:1.6}
+/* 档案卡 */
+.card{background:#F5EFDF;color:#2B2115;border-radius:3px;margin:12px 0;overflow:hidden;
+ border:1px solid rgba(201,162,39,.45);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.ch{padding:14px 16px;cursor:pointer;position:relative}
+.cno{font-size:.62rem;letter-spacing:.26em;color:#8E2F2A;font-family:Courier,monospace}
+.cz{font-size:1.02rem;font-weight:700;margin-top:4px}
+.cj{font-size:.7rem;color:#8A7D64;margin-top:2px;letter-spacing:.04em}
+.cst{font-size:.66rem;color:#6F6450;margin-top:6px;line-height:1.5}
+.card.on .cno{color:#C13B2E}
+.card.on .cz:after{content:'— 已無罪';font-size:.64rem;color:#C13B2E;font-weight:400;letter-spacing:.1em;margin-left:8px}
+/* 無罪章（点亮后浮现） */
+.seal{position:absolute;right:14px;top:12px;width:64px;height:64px;border:2.5px solid #C13B2E;
+ border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+ transform:rotate(-12deg) scale(0);transition:transform .3s cubic-bezier(.34,1.56,.64,1);opacity:.92}
+.card.on .seal{transform:rotate(-12deg) scale(1)}
+.seal b{font-size:.82rem;color:#C13B2E;letter-spacing:.08em}
+.seal span{font-size:.44rem;color:#C13B2E;letter-spacing:.16em;margin-top:1px}
+.seal i{width:34px;height:1.5px;background:#C13B2E;margin:3px 0}
+/* 档案详情 */
+.detail{max-height:0;overflow:hidden;transition:max-height .35s ease;background:#EFE7D0;border-top:1px dashed #C9AE6C}
+.detail.open{max-height:900px}
+.din{padding:14px 16px 6px}
+.drow{display:flex;gap:8px;font-size:.72rem;margin:5px 0;line-height:1.55}
+.drow b{flex:0 0 4.5em;color:#8E2F2A;font-weight:700}
+.drow span{color:#4A3F2C}
+.drow p{margin:0;color:#4A3F2C;font-size:.8rem;line-height:1.75}
+.wt{margin:10px 0 4px;padding:8px 12px;background:rgba(193,59,46,.07);border-left:2px solid #C13B2E;
+ font-size:.72rem;color:#8E2F2A}
+.act{padding:8px 16px 14px;text-align:right}
+button{background:#16233E;color:#EDE6D2;border:1px solid #C9A227;border-radius:2px;
+ padding:9px 18px;font-size:.76rem;letter-spacing:.14em;cursor:pointer;font-family:inherit}
+button:active{transform:translateY(1px)}
+.card.on button{background:#C13B2E;border-color:#C13B2E;color:#fff}
+/* 终章 */
+#final{max-width:640px;margin:38px auto 0;text-align:center;padding:26px 18px;
+ border:2px solid #C9A227;border-radius:4px;display:none;background:rgba(201,162,39,.05)}
+#final.show{display:block}
+#final .fl{font-size:.62rem;letter-spacing:.34em;color:#C9A227}
+#final h2{font-size:1.3rem;margin:10px 0 4px;color:#EDE6D2;letter-spacing:.1em}
+#final .fj{font-size:.86rem;color:#C9A227;margin-bottom:10px}
+#final p{font-size:.78rem;color:#B3A88C;line-height:1.8}
+.bstamp{width:110px;height:110px;border:3px double #C13B2E;border-radius:50%;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ margin:14px auto;transform:rotate(-8deg)}
+.bstamp b{color:#C13B2E;font-size:1rem;letter-spacing:.12em}
+.bstamp span{color:#C13B2E;font-size:.56rem;letter-spacing:.2em;margin-top:3px}
+.bstamp i{width:56px;height:2px;background:#C13B2E;margin:4px 0}
+/* 档案说明+贴士 */
+#dossier{max-width:640px;margin:44px auto 0;border-top:1px solid rgba(201,162,39,.25);padding-top:18px}
+#dossier h3{font-size:.66rem;letter-spacing:.3em;color:#C9A227;margin-bottom:10px}
+#dossier p{font-size:.72rem;color:#8A7F66;line-height:1.9}
+#dossier .nt{font-size:.64rem;color:#6F6450;margin-top:10px;opacity:.85}
+footer{margin-top:40px;text-align:center;font-size:.62rem;color:#5F5642;letter-spacing:.14em;line-height:2}
+.toast{position:fixed;left:50%;bottom:12%;transform:translateX(-50%) translateY(20px);
+ background:#C13B2E;color:#fff;padding:10px 20px;border-radius:3px;font-size:.78rem;
+ opacity:0;transition:all .3s;pointer-events:none;max-width:86%;text-align:center;z-index:9}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(min-width:640px){.bubble{font-size:2.3rem}}
+</style>
+</head>
+<body>
+<header>
+ <div class="court">CAPCOM · GYAKUTEN SAIBAN 1-2-3 · PHOENIX WRIGHT TRILOGY</div>
+ <div class="bubble">異議あり!<small>OBJECTION!</small></div>
+ <h1>逆转裁判 · 成步堂三部曲</h1>
+ <div class="sub">十四桩案件 · 三年法庭 · 一位相信委托人的律师</div>
+ <div class="meta">成步堂龙一 — 绫里真宵 · 千寻 · 御剑怜侍 · 狩魔冥 · 戈多</div>
+</header>
+
+<div class="prog">
+ <div class="pt" id="prog">無罪判决 0 / 14</div>
+ <div class="pbar"><div class="pfill" id="pfill"></div></div>
+</div>
+
+<div class="wallwrap"><div class="wall" id="wall"></div></div>
+
+<div id="cards"></div>
+
+<div id="final">
+ <div class="fl">COURT IS ADJOURNED · 閉廷</div>
+ <h2>三部曲 · 完</h2>
+ <div class="fj">逆転裁判 123 コンプリート</div>
+ <div class="bstamp"><b>無罪</b><i></i><span>ALL 14 CASES</span><span>NOT GUILTY</span></div>
+ <p>你已经对全部十四个谎言喊出了「異議あり!」<br>
+ 从「第一次的逆转」到「华丽的逆转」——<br>
+ 真相也许会迟到，但只要有人愿意追问，它从不缺席。</p>
+</div>
+
+<div id="dossier">
+ <h3>COURT RECORD · 档案说明</h3>
+ <p>14 话话数与话名按官方目录实锤（初代含 NDS 追加话「复苏的逆转」）；每话梗概为多源对照的高置信主线，防剧透从简——真正的逆转，留给你自己在游戏里喊出来。初代五话标注游戏内时间线。卡普空官方合集《逆转裁判123 成步堂精选集》收录全部 14 话（Switch/PS4/Xbox/Steam/3DS）。</p>
+ <div class="nt">本站为玩家自制打卡页，与 Capcom 无关 · 系列正统续作 4-6 与《逆转检事》《大逆转裁判》未收录</div>
+</div>
+
+<footer>OBJECTION! · 逆転裁判 123 · EST. 2001-2004</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+var D=[{"no": "1-1", "part": 0, "zh": "第一次的逆转", "jp": "はじめての逆転", "date": "2016.8.3", "def": "矢张政志（成步堂小学挚友）", "opp": "亚内武文（「新人杀手」）", "body": "新人律师成步堂龙一的第一次辩护，被告是小学起就背锅无数的挚友矢张政志——「任何坏事背后必有矢张」。他被控杀害女友高日美佳。千寻坐镇旁边指导，指针般的证词追问（小雕像时钟为什么慢了两小时？）让成步堂第一次尝到逆转的滋味。系列教学关，也是友情与初心的起点。", "watch": "「思考，再逆转」——千寻的第一课"}, {"no": "1-2", "part": 0, "zh": "逆转姐妹", "jp": "逆転姉妹", "date": "2016.9.5", "def": "绫里真宵（千寻之妹·灵媒师）", "opp": "御剑怜侍（天才检察官·初登场）", "body": "恩师绫里千寻在事务所遇害，赶来的妹妹真宵当场被捕。初次登场的御剑怜侍正是成步堂的小学旧友——天才检察官完美狙击证词。本案埋下贯穿全系列的暗线：DL6 号事件与绫里家的秘密。真宵从此成为成步堂的助手，「逆转姐妹」之名说的正是千寻与真宵。", "watch": "御剑初登场；千寻最后的委托"}, {"no": "1-3", "part": 0, "zh": "逆转的大将军", "jp": "逆転のトノサマン", "date": "2016.10.15", "def": "荷星三郎（大江户大将军主演）", "opp": "御剑怜侍", "body": "儿童特摄英雄《大江户大将军》的主演荷星三郎被控杀死同台演员。片场、粉丝、十五分钟电视英雄的浮世绘——而真正的逆转藏在摄影机的取景框里。本案气氛最轻松的一话，御剑在法庭上罕见地「暗中助攻」，他的转变从这里开始。", "watch": "取景框里的真相；御剑的第一次偏航"}, {"no": "1-4", "part": 0, "zh": "逆转，然后再见", "jp": "逆転、そしてサヨナラ", "date": "2016.12.25", "def": "御剑怜侍（检察官成为被告）", "opp": "狩魔豪（40 年无败绩·御剑之师）", "body": "圣诞夜葫芦湖杀人案，被捕的竟是御剑本人。他拒绝辩护，成步堂硬接。案件的根扎在十五年前的 DL6 号事件——法庭上站着的对手，是狩魔豪，40 年无败绩的传奇、御剑的老师。三部曲第一章的高潮：法庭槌落下时，一个时代的谎言被敲碎。", "watch": "DL6 号事件全貌；狩魔豪 vs 成步堂"}, {"no": "1-5", "part": 0, "zh": "复苏的逆转", "jp": "蘇る逆転", "date": "NDS 版追加", "def": "宝月巴（首席检察官·承认杀人）", "opp": "御剑怜侍", "body": "NDS 复刻时全新追加的一话，也是系列最长案件之一。检察官宝月巴对杀害搜查官供认不讳，妹妹宝月茜委托成步堂。科学搜查系统（指纹·鲁米诺）首次引入，同一时刻「同一被害人在两地被杀」的悖论指向惊人真相。故事直接衔接二代。", "watch": "科学搜查初登场；一案两凶的悖论"}, {"no": "2-1", "part": 1, "zh": "失去的逆转", "jp": "失われた逆転", "date": "", "def": "零木真子（「不幸的女神」·女警）", "opp": "亚内武文", "body": "开庭前的成步堂被灭火器砸中央忆：连法庭规则都忘了的律师硬着头皮上庭，为「不幸女神」零木真子辩护——她的男友町尾守被杀，倒霉程度与矢张有一拼。证词随着记忆一起逐渐恢复，本话是系列最欢乐的开场教学，香蕉皮与棒球手套都是关键证据。", "watch": "失忆律师的法庭首秀"}, {"no": "2-2", "part": 1, "zh": "再会，然后逆转", "jp": "再会、そして逆転", "date": "", "def": "绫里真宵（灵媒密室中的被告）", "opp": "狩魔冥（狩魔豪之女·持鞭初登场）", "body": "时间线在 2-1 之前。为挽回名声，雾崎医生请真宵灵媒召亡魂写认罪书——灵媒进行中，医生在密室中被杀，真宵再次被捕。挥舞鞭子的天才检察官狩魔冥登场（为父复仇而来），绫里家深处的秘密（仓院之罐、春美、十四年前的医疗事故）层层揭开。", "watch": "狩魔冥登场；仓院之里·绫里家恩怨"}, {"no": "2-3", "part": 1, "zh": "逆转马戏团", "jp": "逆転サーカス", "date": "", "def": "马克思·加拉库蒂加（魔术师）", "opp": "狩魔冥", "body": "岁末的马戏团公演次日，团长立见七百人被害，嫌疑人是被真宵疯狂追捧的魔术师马克思。马戏团里没有正常人：驯兽师米莉卡、轮椅杂技 duo 阿库罗巴特、狮子……本案的「不可能犯罪」手法对得起「马戏团」三个字的想象力。", "watch": "最荒诞的舞台，最心酸的动机"}, {"no": "2-4", "part": 1, "zh": "再会了，逆转", "jp": "さらば、逆転", "date": "", "def": "王都楼真悟（当红演员）", "opp": "狩魔冥→御剑怜侍（临危回归）", "body": "「英雄中的英雄」颁奖典礼上，演员藤见野勋被杀，竞争对手王都楼真悟被捕。随即真宵被绑架——绑匪的条件：王都楼的完全无罪判决。为救人质，成步堂被迫为一个可能真有罪的人辩护，系列最残酷的道德困境。狩魔冥被狙击无法出庭，销声匿迹的御剑以代理检察官身份回归。最终法庭的心理战被誉为系列巅峰。", "watch": "正义与人质的两难；御剑回归"}, {"no": "3-1", "part": 2, "zh": "回忆的逆转", "jp": "思い出の逆転", "date": "五年前", "def": "成步堂龙一（大学生·被告）", "opp": "御剑怜侍", "body": "时间倒回五年前：勇盟大学的学生成步堂被控毒杀药学院学生吞田菊三——为他辩护的，是菜鸟律师绫里千寻。证人席上那个似曾相识的身影，唤起千寻对自己第一案的回忆。本案揭开成步堂与前女友美柳千奈美的过往，以及他为什么成为律师。", "watch": "千寻视角；成步堂的过去"}, {"no": "3-2", "part": 2, "zh": "被盗的逆转", "jp": "盗まれた逆転", "date": "", "def": "天杉优作（自首的假面☆怪盗）", "opp": "戈多（咖啡面具检察官·初登场）", "body": "假面☆怪盗盗走绫里家秘宝「仓院之壶」，嫌疑人天杉优作却自己投案自首——他的妻子请求成步堂辩护。与此同时，KB 保安公司 CEO 毒岛黑兵卫被害案与失窃案纠缠在一起。喝咖啡戴电子面具的神秘检察官戈多登场，他对成步堂抱有莫名的敌意，称呼他「丸步堂」。", "watch": "戈多登场；一案两事的纠缠"}, {"no": "3-3", "part": 2, "zh": "逆转的配方", "jp": "逆転のレシピ", "date": "", "def": "零木真子（吐丽美庵毒杀案·再登场）", "opp": "戈多", "body": "糸锯怒气冲冲找上门：成步堂的糟糕辩护让零木真子被判有罪——可成步堂根本没接过这个案子！有人冒名「成步堂」出庭辩护。法国餐厅「吐丽美庵」的毒杀案重审开始，本案从头到尾都是「虚假」：假律师、假证词、看不见的男人——用虚假击败虚假。", "watch": "假成步堂事件；「本案没有一句真话」"}, {"no": "3-4", "part": 2, "zh": "初始的逆转", "jp": "始まりの逆転", "date": "时间线最早", "def": "尾并田美散（越狱的死刑犯）", "opp": "御剑怜侍（初上庭）", "body": "时间线上最早的一话：千寻的第一案，为越狱死刑犯尾并田美散辩护，他被控杀害警官美柳勇希。前辈神乃木庄龙协助千寻，对面是同样第一次出庭的御剑。法庭上的关键证人美柳千奈美狡猾脱身，被告最终自我了断——千寻职业生涯的阴影从这里开始。戈多面具下的真面目，也在这里揭晓。", "watch": "千寻与御剑的起点；戈多的秘密"}, {"no": "3-5", "part": 2, "zh": "华丽的逆转", "jp": "華麗なる逆転", "date": "", "def": "绫里真宵（叶樱院·最后的被告）", "opp": "戈多", "body": "三部曲大结局。叶樱院修行之旅失控：真宵失踪，成步堂寻人时从燃烧的桥上坠河染上重感冒，绘本画家天流斋爱丽丝陈尸寺院。案件直指绫里家的核心：千奈美三姐妹、灵媒的对决、十五年恩怨的总清算。在「意想不到的同伴」帮助下，成步堂完成系列最华丽的一次逆转——所有伏笔，全部回收。", "watch": "全系列伏笔回收；最终法庭"}],P=[{"zh": "逆转裁判", "en": "GYAKUTEN SAIBAN", "sub": "2001 · GBA / 复苏的逆转（NDS 追加）", "desc": "新人律师成步堂龙一：从矢张到狩魔豪", "color": "#1F3A5F"}, {"zh": "逆转裁判2", "en": "JUSTICE FOR ALL", "sub": "2002 · GBA", "desc": "狩魔冥登场：心灵枷锁与最残酷的两难", "color": "#8E2F2A"}, {"zh": "逆转裁判3", "en": "TRIALS AND TRIBULATIONS", "sub": "2004 · GBA", "desc": "戈多与千寻：过去与现在交汇的大结局", "color": "#6E5420"}];
+var lit=[];try{lit=JSON.parse(localStorage.getItem('obj_log')||'[]')}catch(e){lit=[]}
+function save(){localStorage.setItem('obj_log',JSON.stringify(lit))}
+function isLit(i){return lit.indexOf(i)>=0}
+function renderWall(){
+ var el=document.getElementById('wall');el.innerHTML='';
+ for(var i=0;i<14;i++)(function(i){
+  var d=document.createElement('div');
+  d.className='w'+(isLit(i)?' on':'');
+  d.title=D[i].no+' '+D[i].zh;
+  d.onclick=function(){var c=document.getElementById('c'+i);if(c)c.querySelector('.ch').click();window.scrollTo({top:c.getBoundingClientRect().top+window.scrollY-70,behavior:'smooth'})};
+  el.appendChild(d);
+ })(i);
+ document.getElementById('prog').textContent='無罪判决 '+lit.length+' / 14';
+ document.getElementById('pfill').style.width=(lit.length/14*100)+'%';
+}
+function renderList(){
+ var el=document.getElementById('cards');el.innerHTML='';
+ for(var pi=0;pi<3;pi++){
+  var pd=document.createElement('div');pd.className='part';
+  pd.innerHTML='<div class="phead" style="border-color:'+P[pi].color+'">'+
+   '<div class="pn">PART '+(pi+1)+' · '+P[pi].en+'</div>'+
+   '<div class="ph" style="color:'+P[pi].color+'">'+P[pi].zh+'</div>'+
+   '<div class="pd">'+P[pi].sub+'<br>'+P[pi].desc+'</div></div>';
+  el.appendChild(pd);
+  for(var i=0;i<14;i++){
+   if(D[i].part!==pi)continue;
+   (function(i,pi){
+    var c=document.createElement('div');c.className='card'+(isLit(i)?' on':'');c.id='c'+i;
+    c.innerHTML='<div class="ch">'+
+      '<div class="cno">CASE '+D[i].no+(D[i].date?' · '+D[i].date:'')+'</div>'+
+      '<div class="cz">'+D[i].zh+'</div>'+
+      '<div class="cj">'+D[i].jp+'</div>'+
+      '<div class="seal"><b>無罪</b><i></i><span>NOT GUILTY</span></div>'+
+     '</div>'+
+     '<div class="detail"><div class="din">'+
+      '<div class="drow"><b>被告</b><span>'+D[i].def+'</span></div>'+
+      '<div class="drow"><b>对手检察官</b><span>'+D[i].opp+'</span></div>'+
+      '<div class="drow"><b>案情</b><p>'+D[i].body+'</p></div>'+
+      '<div class="wt">看点 · '+D[i].watch+'</div>'+
+     '</div></div>'+
+     '<div class="act"><button>宣布判决 · 無罪</button></div>';
+    c.querySelector('.ch').onclick=function(){
+     var dt=c.querySelector('.detail');
+     var open=dt.classList.contains('open');
+     document.querySelectorAll('.detail.open').forEach(function(x){x.classList.remove('open')});
+     if(!open)dt.classList.add('open');
+    };
+    c.querySelector('button').onclick=function(ev){ev.stopPropagation();mark(i)};
+    el.appendChild(c);
+   })(i,pi);
+  }
+ }
+}
+function mark(i){
+ if(isLit(i)){
+  lit.splice(lit.indexOf(i),1);save();renderWall();renderList();
+  document.getElementById('c'+i).querySelector('.detail').classList.add('open');
+  document.getElementById('final').classList.remove('show');
+  toast('CASE '+D[i].no+' 判决已撤销');return;
+ }
+ lit.push(i);save();renderWall();renderList();
+ document.getElementById('c'+i).querySelector('.detail').classList.add('open');
+ toast('CASE '+D[i].no+' '+D[i].zh+' — 無罪!');
+ if(lit.length===14){
+  setTimeout(function(){document.getElementById('final').classList.add('show')},400);
+  setTimeout(function(){window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})},800);
+ }
+}
+var tt;
+function toast(s){var t=document.getElementById('toast');t.textContent=s;t.classList.add('show');
+ clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('show')},2000)}
+renderWall();renderList();
+if(lit.length===14){document.getElementById('final').classList.add('show')}
+</script>
+</body>
+</html>
